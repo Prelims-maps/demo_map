@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta charset='utf-8' />
+    <title>SAI Sample Survey Map</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <!-- Include Mapbox GL JS library -->
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js'></script>
+    <!-- Include Mapbox GL JS CSS -->
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Adding charging station icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+
+        /* CSS styles for the body, map, manual, log-box, buttons, and markers */
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #route1 {
+            position: absolute;
+            left: 30px;
+            top: calc(40% + 150px);
+            width: 20%;
+            bottom: 5%;
+            padding: 10px;
+            background-color: #ffe7b4;
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #000000;
+        }
+
+        #route2 {
+            position: absolute;
+            right: 30px;
+            top: calc(40% + 150px);
+            width: 20%;
+            bottom: 5%;
+            padding: 10px;
+            background-color: #f1f1f1;
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #000000;
+        }
+
+        #airecommendation {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 10px; /* Adjust this value to control how far from the top you want it */
+            width: 21%;
+            height: 50px; /* Set your desired height */
+            padding: 1px 10px 10px 20px;
+            background-color: #4c7c8a;
+            color: #FFFFFF; /* Change this to your desired text color */
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #FFFFFF;
+        }
+        
+
+    </style>
+</head>
+
+<body>
+
+    <!-- Map container -->
+    <div id='map'></div>
+    
+    <!-- Information about route 1 -->
+    <div id="route1">
+        <h3>Route 1</h3>
+    </div>
+
+    <!-- Information about route 2 -->
+    <div id="route2">
+        <h3>Route 2</h3>
+    </div>
+
+    <!-- Information about route 2 -->
+    <div id="airecommendation">
+        <h3>AI recommendation: Route X</h3>
+    </div>
+
+    <script>
+        // Set the Mapbox access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGdhem1laCIsImEiOiJjbGx5NzZpc3QwYWZtM2xwcjE3a2J5bjQxIn0.cpUto7a5fO9EgSY2LCjOSQ';
+        
+        // Initialize the map
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/navigation-day-v1',
+            center: [-87.629799, 41.878113],
+            zoom: 1
+        });
+        const bounds = [
+            [-88.714420, 41.255327],
+            [-87.001523, 42.307821]
+        ];
+        map.setMaxBounds(bounds);
+
+        // Variables to store start and end points
+        let startPoint = null;
+        let endPoint = null;
+
+        // Array to store charging station data
+        // SET COORDINATES OF CHARGING STATION INFO BELOW
+        const chargingStations = [
+            {
+                coordinates: [-87.840614, 41.692020]
+            },
+            {
+                coordinates: [-87.639969, 41.924516]
+            }
+        ];
+
+        let flag = 1;
+
+        // Function to add charging stations to the map
+        function addChargingStations() {
+            chargingStations.forEach(station => {
+                const el = document.createElement('div');
+                el.className = 'marker';
+
+                // Create an icon element
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-charging-station';
+                el.appendChild(icon);
+
+                // Set the size of the icon (increase this value for larger icons)
+                icon.style.fontSize = '40px';  // Adjust to desired size
+
+                // Alternate styles if desired
+                if (flag) {
+                    icon.style.color = '#9A6B03';  // Brown
+                    flag = 0;
+                } else {
+                    icon.style.color = '#000000';  // Black
+                    flag = 1;
+                }
+
+                new mapboxgl.Marker({ element: el })
+                    .setLngLat(station.coordinates)
+                    .addTo(map);
+            });
+        }
+
+        // Function to get the route to travel between any route type
+        async function getRoute(routeType) {
+            console.log(`Get route for type ${routeType}`);
+
+            let startPoint, midPoint, endPoint;
+
+            // Set the start and end points from pointSource and endpointsource as used in case 1
+            startPoint = {
+                lng: pointSource.data.features[0].geometry.coordinates[0],
+                lat: pointSource.data.features[0].geometry.coordinates[1]
+            };
+            endPoint = {
+                lng: endpointsource.data.features[0].geometry.coordinates[0],
+                lat: endpointsource.data.features[0].geometry.coordinates[1]
+            };
+
+            switch (routeType) {
+                case 1:
+                    // Use the first charging station for case 2
+                    midPoint = {
+                        lng: chargingStations[0].coordinates[0],
+                        lat: chargingStations[0].coordinates[1]
+                    };
+                    await fetchAndDisplayRoute(startPoint, midPoint, '#CC9316'); // Fetch route to charging station
+                    await fetchAndDisplayRoute(midPoint, endPoint, '#CC9316');  // Fetch route from charging station to end
+                    break;
+                case 2:
+                    // Use the second charging station for case 3
+                    midPoint = {
+                        lng: chargingStations[1].coordinates[0],
+                        lat: chargingStations[1].coordinates[1]
+                    };
+                    await fetchAndDisplayRoute(startPoint, midPoint, '#555555'); // Fetch route to charging station
+                    await fetchAndDisplayRoute(midPoint, endPoint, '#555555');  // Fetch route from charging station to end
+                    break;
+            }
+        }
+
+    
+        // Function to fetch and display a route between two points
+        async function fetchAndDisplayRoute(start, end, color) {
+            console.log(`Fetching route from ${start.lng},${start.lat} to ${end.lng},${end.lat}`);
+
+            // Fetch the route data from the Mapbox Directions API
+            const query = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+                { method: 'GET' }
+            );
+            const json = await query.json();
+            const data = json.routes[0];
+            const route = data.geometry.coordinates;
+            const geojson = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: route
+                }
+            };
+
+            // Display the route on the map
+            const routeId = `route-${start.lng}-${start.lat}-${end.lng}-${end.lat}`;
+            if (map.getSource(routeId)) {
+                map.getSource(routeId).setData(geojson);
+            } else {
+                map.addLayer({
+                    id: routeId,
+                    type: 'line',
+                    source: {
+                        type: 'geojson',
+                        data: geojson
+                    },
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': color,
+                        'line-width': 5.5,
+                        'line-opacity': 0.79
+                    }
+                });
+            }
+        }
+
+        // Define sources for start and end points
+        // SET START AND END POINTS BELOW
+        const pointSource = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {
+                            title: 'Start'
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [-87.76297503173643,41.97199753080636]
+                        }
+                    }
+                ]
+            }
+        };
+
+        const endpointsource = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {
+                            title: 'End'
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [-88.01402944129183,41.62876830643597]
+                        }
+                    }
+                ]
+            }
+        };
+
+        // Add route time/distance to instructions & update charging station details
+        map.on('load', async () => {
+            addChargingStations();  // You might need to re-add stations to reflect updated data
+            getRoute(1);
+            getRoute(2);
+
+            // Add layers for start and end points
+            map.addLayer({
+                id: 'point',
+                type: 'circle',
+                source: pointSource,
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#1972b0'
+                }
+            });
+            map.addLayer({
+                id: 'point-label',
+                type: 'symbol',
+                source: pointSource,
+                layout: {
+                    'text-field': '{title}',
+                    'text-size': 24,
+                    'text-anchor': 'left',
+                    'text-offset': [0.8, 0]
+                },
+                paint: {
+                    'text-color': 'black'
+                }
+            });
+
+            map.addLayer({
+                id: 'endpoint',
+                type: 'circle',
+                source: endpointsource,
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#e32b44'
+                }
+            });
+            map.addLayer({
+                id: 'endpoint-label',
+                type: 'symbol',
+                source: endpointsource,
+                layout: {
+                    'text-field': '{title}',
+                    'text-size': 24,
+                    'text-anchor': 'left',
+                    'text-offset': [0.8, 0]
+                },
+                paint: {
+                    'text-color': 'black'
+                }
+            });
+        });
+
+    </script>
+</body>
+
+</html>
