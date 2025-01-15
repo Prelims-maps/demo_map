@@ -139,29 +139,38 @@
 
         let flag = 1;
 
-        // Function to add charging stations to the map
+        // Function to add charging stations to the map with labels matching the icon color
         function addChargingStations() {
-            chargingStations.forEach(station => {
+            chargingStations.forEach((station, index) => {
                 const el = document.createElement('div');
                 el.className = 'marker';
+                el.style.display = 'flex';
+                el.style.flexDirection = 'column';
+                el.style.alignItems = 'center';
+
+                // Define the color for the icon and label
+                const iconColor = index === 0 ? '#9A6B03' : '#000000'; // Brown for "Route 1", Black for "Route 2"
 
                 // Create an icon element
                 const icon = document.createElement('i');
                 icon.className = 'fa-solid fa-charging-station';
+                icon.style.fontSize = '40px'; // Adjust icon size
+                icon.style.color = iconColor; // Set icon color
                 el.appendChild(icon);
 
-                // Set the size of the icon (increase this value for larger icons)
-                icon.style.fontSize = '40px';  // Adjust to desired size
+                // Create a label element
+                const label = document.createElement('div');
+                label.innerText = `Route ${index + 1}`; // Set label text to "Route 1" and "Route 2"
+                label.style.fontSize = '14px';
+                label.style.color = '#ffffff'; // White text color for contrast
+                label.style.backgroundColor = iconColor; // Match the background color to the icon color
+                label.style.padding = '4px 8px';
+                label.style.borderRadius = '4px';
+                label.style.marginTop = '4px'; // Space between icon and label
+                label.style.textAlign = 'center';
+                el.appendChild(label);
 
-                // Alternate styles if desired
-                if (flag) {
-                    icon.style.color = '#9A6B03';  // Brown
-                    flag = 0;
-                } else {
-                    icon.style.color = '#000000';  // Black
-                    flag = 1;
-                }
-
+                // Add marker to the map
                 new mapboxgl.Marker({ element: el })
                     .setLngLat(station.coordinates)
                     .addTo(map);
