@@ -181,46 +181,44 @@
         async function getRoute(routeType) {
             console.log(`Get route for type ${routeType}`);
 
-            let startPoint, midPoint, endPoint;
-
-            // Set the start and end points from pointSource and endpointsource as used in case 1
-            startPoint = {
+            let startPoint = {
                 lng: pointSource.data.features[0].geometry.coordinates[0],
                 lat: pointSource.data.features[0].geometry.coordinates[1]
             };
-            endPoint = {
+            let endPoint = {
                 lng: endpointsource.data.features[0].geometry.coordinates[0],
                 lat: endpointsource.data.features[0].geometry.coordinates[1]
             };
 
-            switch (routeType) {
-                case 1:
-                    // Use the first charging station for case 2
-                    midPoint = {
-                        lng: chargingStations[0].coordinates[0],
-                        lat: chargingStations[0].coordinates[1]
-                    };
-                    await fetchAndDisplayRoute(startPoint, midPoint, '#CC9316'); // Fetch route to charging station
-                    await fetchAndDisplayRoute(midPoint, endPoint, '#CC9316');  // Fetch route from charging station to end
-                    break;
-                case 2:
-                    // Use the second charging station for case 3
-                    midPoint = {
-                        lng: chargingStations[1].coordinates[0],
-                        lat: chargingStations[1].coordinates[1]
-                    };
-                    await fetchAndDisplayRoute(startPoint, midPoint, '#555555'); // Fetch route to charging station
-                    await fetchAndDisplayRoute(midPoint, endPoint, '#555555');  // Fetch route from charging station to end
-                    break;
+            let midPoint;
+            let baseRouteId, color;
+
+            if (routeType === 1) {
+                midPoint = {
+                    lng: chargingStations[0].coordinates[0],
+                    lat: chargingStations[0].coordinates[1]
+                };
+                baseRouteId = "route1";
+                color = "#CC9316"; // Brown
+            } else {
+                midPoint = {
+                    lng: chargingStations[1].coordinates[0],
+                    lat: chargingStations[1].coordinates[1]
+                };
+                baseRouteId = "route2";
+                color = "#555555"; // Grey
             }
+
+            // Draw both segments with unique IDs
+            await fetchAndDisplayRoute(startPoint, midPoint, color, `${baseRouteId}-start`);
+            await fetchAndDisplayRoute(midPoint, endPoint, color, `${baseRouteId}-end`);
         }
 
-    
         // Function to fetch and display a route between two points
-        async function fetchAndDisplayRoute(start, end, color) {
+        async function fetchAndDisplayRoute(start, end, color, routeId) {
             console.log(`Fetching route from ${start.lng},${start.lat} to ${end.lng},${end.lat}`);
 
-            // Fetch the route data from the Mapbox Directions API
+            // Fetch route from Mapbox Directions API
             const query = await fetch(
                 `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
                 { method: 'GET' }
@@ -237,8 +235,7 @@
                 }
             };
 
-            // Display the route on the map
-            const routeId = `route-${start.lng}-${start.lat}-${end.lng}-${end.lat}`;
+            // Check if route already exists, else create it
             if (map.getSource(routeId)) {
                 map.getSource(routeId).setData(geojson);
             } else {
@@ -259,9 +256,33 @@
                         'line-opacity': 1
                     }
                 });
+
+                // Get base route name (either "route1" or "route2")
+                const baseRoute = routeId.includes("route1") ? "route1" : "route2";
+
+                // Add mouse events to control transparency
+                map.on('mouseenter', routeId, () => {
+                    map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
+                    map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
+                    const otherRoute = baseRoute === 'route1' ? 'route2' : 'route1';
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 0.3);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 0.3);
+                    }
+                });
+
+                map.on('mouseleave', routeId, () => {
+                    map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
+                    map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
+                    const otherRoute = baseRoute === 'route1' ? 'route2' : 'route1';
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 1);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 1);
+                    }
+                });
             }
         }
-
+        
         // Define sources for start and end points
         // SET START AND END POINTS BELOW
         const pointSource = {
