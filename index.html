@@ -144,12 +144,14 @@
             chargingStations.forEach((station, index) => {
                 const el = document.createElement('div');
                 el.className = 'marker';
+                el.id = `station${index + 1}`; // Unique ID for each charging station
                 el.style.display = 'flex';
                 el.style.flexDirection = 'column';
                 el.style.alignItems = 'center';
+                el.style.cursor = 'pointer'; // Indicates it's interactive
 
                 // Define the color for the icon and label
-                const iconColor = index === 0 ? '#9A6B03' : '#000000'; // Brown for "Route 1", Black for "Route 2"
+                const iconColor = index === 0 ? '#9A6B03' : '#000000'; // Brown for Route 1, Black for Route 2
 
                 // Create an icon element
                 const icon = document.createElement('i');
@@ -162,13 +164,41 @@
                 const label = document.createElement('div');
                 label.innerText = `Route ${index + 1}`; // Set label text to "Route 1" and "Route 2"
                 label.style.fontSize = '14px';
-                label.style.color = '#ffffff'; // White text color for contrast
-                label.style.backgroundColor = iconColor; // Match the background color to the icon color
+                label.style.color = '#ffffff';
+                label.style.backgroundColor = iconColor;
                 label.style.padding = '4px 8px';
                 label.style.borderRadius = '4px';
                 label.style.marginTop = '4px'; // Space between icon and label
                 label.style.textAlign = 'center';
                 el.appendChild(label);
+
+                // Add event listeners for hover effect
+                el.addEventListener('mouseenter', () => {
+                    document.getElementById(`station${index + 1}`).style.opacity = '1';
+                    const otherStation = index === 0 ? 'station2' : 'station1';
+                    document.getElementById(otherStation).style.opacity = '0.3';
+
+                    // Also make the other route transparent
+                    const otherRoute = index === 0 ? 'route2' : 'route1';
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 0.3);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 0.3);
+                    }
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    document.getElementById('station1').style.opacity = '1';
+                    document.getElementById('station2').style.opacity = '1';
+
+                    if (map.getLayer('route1-start')) {
+                        map.setPaintProperty('route1-start', 'line-opacity', 1);
+                        map.setPaintProperty('route1-end', 'line-opacity', 1);
+                    }
+                    if (map.getLayer('route2-start')) {
+                        map.setPaintProperty('route2-start', 'line-opacity', 1);
+                        map.setPaintProperty('route2-end', 'line-opacity', 1);
+                    }
+                });
 
                 // Add marker to the map
                 new mapboxgl.Marker({ element: el })
@@ -259,25 +289,40 @@
 
                 // Get base route name (either "route1" or "route2")
                 const baseRoute = routeId.includes("route1") ? "route1" : "route2";
+                const otherRoute = baseRoute === "route1" ? "route2" : "route1";
+                const otherStation = baseRoute === "route1" ? "station2" : "station1";
 
                 // Add mouse events to control transparency
                 map.on('mouseenter', routeId, () => {
                     map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
                     map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
-                    const otherRoute = baseRoute === 'route1' ? 'route2' : 'route1';
+                    
+                    // Make the other route transparent
                     if (map.getLayer(`${otherRoute}-start`)) {
                         map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 0.3);
                         map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 0.3);
+                    }
+
+                    // Make the other charging station transparent
+                    if (document.getElementById(otherStation)) {
+                        document.getElementById(otherStation).style.opacity = '0.3';
                     }
                 });
 
                 map.on('mouseleave', routeId, () => {
                     map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
                     map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
-                    const otherRoute = baseRoute === 'route1' ? 'route2' : 'route1';
+
                     if (map.getLayer(`${otherRoute}-start`)) {
                         map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 1);
                         map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 1);
+                    }
+
+                    if (document.getElementById('station1')) {
+                        document.getElementById('station1').style.opacity = '1';
+                    }
+                    if (document.getElementById('station2')) {
+                        document.getElementById('station2').style.opacity = '1';
                     }
                 });
             }
